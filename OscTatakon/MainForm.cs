@@ -89,7 +89,7 @@ public sealed class MainForm : Form
         mappingGrid.DataError += (_, e) => e.ThrowException = false;
         mappingGrid.CurrentCellDirtyStateChanged += (_, _) =>
         {
-            if (mappingGrid.IsCurrentCellDirty && mappingGrid.CurrentCell is DataGridViewComboBoxCell)
+            if (mappingGrid.IsCurrentCellDirty && mappingGrid.CurrentCell is DataGridViewComboBoxCell or DataGridViewCheckBoxCell)
             {
                 mappingGrid.CommitEdit(DataGridViewDataErrorContexts.Commit);
             }
@@ -136,8 +136,8 @@ public sealed class MainForm : Form
         var mapGroup = CreateGroup("OSC アドレス → キー割り当て (引数が 0 / false のメッセージは無視)");
         mapGroup.Dock = DockStyle.Fill;
         mapGroup.AutoSize = false;
-        mappingGrid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Name", HeaderText = "名前", FillWeight = 25 });
-        mappingGrid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Address", HeaderText = "OSC アドレス", FillWeight = 45 });
+        mappingGrid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Name", HeaderText = "名前", FillWeight = 22 });
+        mappingGrid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Address", HeaderText = "OSC アドレス", FillWeight = 38 });
         var keyColumn = new DataGridViewComboBoxColumn
         {
             Name = "Key",
@@ -148,6 +148,13 @@ public sealed class MainForm : Form
         };
         foreach (var key in SELECTABLE_KEYS) keyColumn.Items.Add(key);
         mappingGrid.Columns.Add(keyColumn);
+        mappingGrid.Columns.Add(new DataGridViewCheckBoxColumn
+        {
+            Name = "WithSpace",
+            HeaderText = "+Space",
+            ToolTipText = "オンにすると、このキーと同時に Space キーも押します",
+            FillWeight = 12,
+        });
         mappingGrid.Columns.Add(new DataGridViewButtonColumn
         {
             Name = "Test",
@@ -239,7 +246,7 @@ public sealed class MainForm : Form
         foreach (var mapping in settings.Mappings)
         {
             var key = SELECTABLE_KEYS.Contains(mapping.Key) ? mapping.Key : Keys.None;
-            mappingGrid.Rows.Add(mapping.Name, mapping.Address, key);
+            mappingGrid.Rows.Add(mapping.Name, mapping.Address, key, mapping.WithSpace);
         }
         RebuildAddressMap();
         ApplyInputSettings();
@@ -271,6 +278,7 @@ public sealed class MainForm : Form
                 Name = (row.Cells["Name"].Value as string ?? "").Trim(),
                 Address = address,
                 Key = row.Cells["Key"].Value is Keys key ? key : Keys.None,
+                WithSpace = row.Cells["WithSpace"].Value is true,
             });
         }
         return mappings;
@@ -389,17 +397,27 @@ public sealed class MainForm : Form
 
         if (isTrigger)
         {
-            injector.Hit(mapping!.Key);
+            HitMapping(mapping!);
             Interlocked.Increment(ref hitCount);
         }
 
         if (isReceiveLogEnabled)
         {
             var args = string.Join(", ", message.Args.Select(a => a?.ToString() ?? "nil"));
-            var result = !isMapped ? "未割り当て" : isTrigger ? $"→ {mapping!.Key}" : "無視(0/false)";
+            var result = !isMapped ? "未割り当て" : isTrigger ? $"→ {DescribeKeys(mapping!)}" : "無視(0/false)";
             logQueue.Enqueue($"{message.Address} [{args}] {result}");
         }
     }
+
+    /// <summary>割り当てのキーを叩く (+Space がオンなら Space も同時に)。</summary>
+    private void HitMapping(KeyMapping mapping)
+    {
+        injector.Hit(mapping.Key);
+        if (mapping.WithSpace && mapping.Key != Keys.Space) injector.Hit(Keys.Space);
+    }
+
+    private static string DescribeKeys(KeyMapping mapping) =>
+        mapping.WithSpace && mapping.Key != Keys.Space ? $"{mapping.Key} + Space" : mapping.Key.ToString();
 
     /// <summary>引数なし、または先頭引数が 0 / false 以外なら入力とみなす。</summary>
     private static bool IsTriggerValue(IReadOnlyList<object?> args)
@@ -426,23 +444,24 @@ public sealed class MainForm : Form
         if (e.RowIndex < 0 || mappingGrid.Columns[e.ColumnIndex].Name != "Test") return;
         var row = mappingGrid.Rows[e.RowIndex];
         if (row.IsNewRow || row.Cells["Key"].Value is not Keys key || key == Keys.None) return;
-        AddLog($"3 秒後に {key} を入力します。ゲームのウィンドウをクリックして前面にしてください。");
+        var mapping = new KeyMapping { Key = key, WithSpace = row.Cells["WithSpace"].Value is true };
+        AddLog($"3 秒後に {DescribeKeys(mapping)} を入力します。ゲームのウィンドウをクリックして前面にしてください。");
         await Task.Delay(TEST_DELAY_MS);
-        injector.Hit(key);
-        AddLog($"テスト入力: {key}");
+        HitMapping(mapping);
+        AddLog($"テスト入力: {DescribeKeys(mapping)}");
     }
 
     private async Task TestAllKeysAsync()
     {
-        var keys = ReadMappingsFromGrid().Select(m => m.Key).Where(k => k != Keys.None).ToList();
-        if (keys.Count == 0) return;
+        var mappings = ReadMappingsFromGrid().Where(m => m.Key != Keys.None).ToList();
+        if (mappings.Count == 0) return;
         testAllButton.Enabled = false;
         AddLog("3 秒後に全キーを順番に入力します。ゲームのウィンドウをクリックして前面にしてください。");
         await Task.Delay(TEST_DELAY_MS);
-        foreach (var key in keys)
+        foreach (var mapping in mappings)
         {
-            injector.Hit(key);
-            AddLog($"テスト入力: {key}");
+            HitMapping(mapping);
+            AddLog($"テスト入力: {DescribeKeys(mapping)}");
             await Task.Delay(TEST_INTERVAL_MS);
         }
         testAllButton.Enabled = true;

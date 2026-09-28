@@ -9,6 +9,9 @@ public sealed class KeyMapping
     public string Name { get; set; } = "";
     public string Address { get; set; } = "";
     public Keys Key { get; set; } = Keys.None;
+
+    /// <summary>true ならこのキーと同時に Space も押す。</summary>
+    public bool WithSpace { get; set; }
 }
 
 /// <summary>設定 (exe と同じフォルダの settings.json に保存)。</summary>
