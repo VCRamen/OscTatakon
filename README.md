@@ -37,19 +37,20 @@ Visual Studio 2022 で `OscTatakon/OscTatakon.csproj` を開いてもビルド�
 
 ゲーム既定の D/F/J/K は WASD 操作と被るため、**ゲーム側のキー設定でカッを R / U に変更してください**。
 
-| 名前 | OSC アドレス | キー | +Space |
-|---|---|---|---|
-| ドン(右) | `/taiko/don/right` | J | ON |
-| ドン(左) | `/taiko/don/left` | F | ON |
-| カッ(右) | `/taiko/ka/right` | U | |
-| カッ(左) | `/taiko/ka/left` | R | |
-| 曲選択 ↑ | `/taiko/menu/up` | ↑ | |
-| 曲選択 ↓ | `/taiko/menu/down` | ↓ | |
-| 曲選択 → | `/taiko/menu/right` | → | |
-| 曲選択 ← | `/taiko/menu/left` | ← | |
-| 戻る/オプション | `/taiko/menu/back` | BackSpace | |
+| 名前 | OSC アドレス | キー | +Space | 押しっぱなし |
+|---|---|---|---|---|
+| ドン(右) | `/taiko/don/right` | J | ON | |
+| ドン(左) | `/taiko/don/left` | F | ON | |
+| カッ(右) | `/taiko/ka/right` | U | | |
+| カッ(左) | `/taiko/ka/left` | R | | |
+| 曲選択 ↑ | `/taiko/menu/up` | ↑ | | ON |
+| 曲選択 ↓ | `/taiko/menu/down` | ↓ | | ON |
+| 曲選択 → | `/taiko/menu/right` | → | | ON |
+| 曲選択 ← | `/taiko/menu/left` | ← | | ON |
+| 戻る/オプション | `/taiko/menu/back` | BackSpace | | |
 
 - 表で自由に追加・変更できます (設定は exe と同じフォルダの `settings.json` に保存)。
+- 「押しっぱなし」にチェックを入れた行は、引数 1 (true) で押して 0 (false) で離すまでキーを押し続けます。解放が 10 秒届かない場合は自動で離します。
 - 「割り当てを初期値に戻す」で上の表の状態に戻せます。
 - 「+Space」にチェックを入れた行は、そのキーと同時に Space キーも押します (ドンの行に付けると、ドン入力で Space も押されます)。
 - 引数なし、または先頭引数が 0 / false 以外のメッセージを「1 回叩いた」とみなします。

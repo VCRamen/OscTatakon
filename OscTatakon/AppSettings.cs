@@ -12,6 +12,12 @@ public sealed class KeyMapping
 
     /// <summary>true ならこのキーと同時に Space も押す。</summary>
     public bool WithSpace { get; set; }
+
+    /// <summary>
+    /// true なら押しっぱなしモード。
+    /// 引数 1 (true) で押し、0 (false) で離す。
+    /// </summary>
+    public bool IsHold { get; set; }
 }
 
 /// <summary>設定 (exe と同じフォルダの settings.json に保存)。</summary>
@@ -49,10 +55,10 @@ public sealed class AppSettings
         new KeyMapping { Name = "ドン(左)", Address = "/taiko/don/left", Key = Keys.F, WithSpace = true },
         new KeyMapping { Name = "カッ(右)", Address = "/taiko/ka/right", Key = Keys.U },
         new KeyMapping { Name = "カッ(左)", Address = "/taiko/ka/left", Key = Keys.R },
-        new KeyMapping { Name = "曲選択 ↑", Address = "/taiko/menu/up", Key = Keys.Up },
-        new KeyMapping { Name = "曲選択 ↓", Address = "/taiko/menu/down", Key = Keys.Down },
-        new KeyMapping { Name = "曲選択 →", Address = "/taiko/menu/right", Key = Keys.Right },
-        new KeyMapping { Name = "曲選択 ←", Address = "/taiko/menu/left", Key = Keys.Left },
+        new KeyMapping { Name = "曲選択 ↑", Address = "/taiko/menu/up", Key = Keys.Up, IsHold = true },
+        new KeyMapping { Name = "曲選択 ↓", Address = "/taiko/menu/down", Key = Keys.Down, IsHold = true },
+        new KeyMapping { Name = "曲選択 →", Address = "/taiko/menu/right", Key = Keys.Right, IsHold = true },
+        new KeyMapping { Name = "曲選択 ←", Address = "/taiko/menu/left", Key = Keys.Left, IsHold = true },
         new KeyMapping { Name = "戻る/オプション", Address = "/taiko/menu/back", Key = Keys.Back },
     };
 

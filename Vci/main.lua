@@ -6,6 +6,8 @@
 --   StickRoot2: ドン → F (/taiko/don/left),  カッ → R (/taiko/ka/left)
 --   曲選択ボタン (どちらのバチでも):
 --     KaUp → ↑, KaDown → ↓, KaRight → →, KaLeft → ←, BSOptionButton → BackSpace
+--     上下左右はバチが触れている間 (onTriggerEnter 〜 onTriggerExit) 押しっぱなし
+--     (触れた時に 1、離れた時に 0 を送る)
 --   (キーの割り当ては OscTatakon 側の設定)
 --
 -- OSC はローカル (127.0.0.1) にのみ送信され、送信先ポートは
@@ -27,23 +29,29 @@ local STICK_SETTINGS = {
 }
 
 -- 曲選択ボタンのコライダー名 → OSC アドレス
+-- isHold = true のボタンは、触れている間押しっぱなしにする
 local BUTTON_SETTINGS = {
-    { colliderName = "KaUp", address = "/taiko/menu/up" },          -- ↑
-    { colliderName = "KaDown", address = "/taiko/menu/down" },      -- ↓
-    { colliderName = "KaRight", address = "/taiko/menu/right" },    -- →
-    { colliderName = "KaLeft", address = "/taiko/menu/left" },      -- ←
-    { colliderName = "BSOptionButton", address = "/taiko/menu/back" }, -- BackSpace
+    { colliderName = "KaUp", address = "/taiko/menu/up", isHold = true },          -- ↑
+    { colliderName = "KaDown", address = "/taiko/menu/down", isHold = true },      -- ↓
+    { colliderName = "KaRight", address = "/taiko/menu/right", isHold = true },    -- →
+    { colliderName = "KaLeft", address = "/taiko/menu/left", isHold = true },      -- ←
+    { colliderName = "BSOptionButton", address = "/taiko/menu/back", isHold = false }, -- BackSpace
 }
 
 -- 同じバチの多重ヒット (複数の KaCollider を跨いだ時など) を抑制する時間 (秒)
 local HIT_COOLDOWN_SEC = 0.06
 
--- 同じボタンの多重ヒットを抑制する時間 (秒)。短いとカーソルが 2 つ進むことがある
+-- 同じボタンの多重ヒットを抑制する時間 (秒)。短いと 2 回入力されることがある
+-- (押しっぱなしのボタンには使わない)
 local BUTTON_COOLDOWN_SEC = 0.3
 
 local stickTransforms = {}
 local lastHitTimes = {}
 local lastButtonTimes = {}
+
+-- 押しっぱなしボタンごとの「今触れているコライダーの数」
+-- (両方のバチ、または複数のコライダーが同時に触れても 1 回の押下として扱う)
+local holdTouchCounts = {}
 
 local kaSnapObj = vci.assets.GetTransform("SuapKa")
 local taikoObj = vci.assets.GetTransform("TataconRoot")
@@ -111,6 +119,15 @@ local function SendHit(stickName, hitType)
 end
 
 local function SendButton(buttonSetting)
+    if buttonSetting.isHold then
+        local touchCount = holdTouchCounts[buttonSetting.colliderName] or 0
+        holdTouchCounts[buttonSetting.colliderName] = touchCount + 1
+        if touchCount == 0 then
+            vci.osc.SendInt32(buttonSetting.address, 1)
+        end
+        return
+    end
+
     local now = GetNowSec()
     local lastTime = lastButtonTimes[buttonSetting.colliderName]
     if lastTime ~= nil and now - lastTime < BUTTON_COOLDOWN_SEC then
@@ -119,6 +136,33 @@ local function SendButton(buttonSetting)
     lastButtonTimes[buttonSetting.colliderName] = now
 
     vci.osc.SendInt32(buttonSetting.address, 1)
+end
+
+local function ReleaseButton(buttonSetting)
+    if not buttonSetting.isHold then
+        return
+    end
+
+    local touchCount = holdTouchCounts[buttonSetting.colliderName] or 0
+    if touchCount <= 0 then
+        return
+    end
+    holdTouchCounts[buttonSetting.colliderName] = touchCount - 1
+    if touchCount == 1 then
+        vci.osc.SendInt32(buttonSetting.address, 0)
+    end
+end
+
+-- onTriggerEnter / onTriggerExit の引数からバチ名と相手のコライダー名を取り出す
+local function ResolveStickAndCollider(item, hit)
+    -- バチ側が item でも hit でも拾えるように両方向チェックする
+    if STICK_SETTINGS[item] ~= nil then
+        return item, hit
+    end
+    if STICK_SETTINGS[hit] ~= nil then
+        return hit, item
+    end
+    return nil, nil
 end
 
 function updateAll()
@@ -150,20 +194,8 @@ end
 
 -- item: トリガー判定が発生した SubItem 名, hit: 当たった相手のコライダー名
 function onTriggerEnter(item, hit)
-    -- バチ側が item でも hit でも拾えるように両方向チェックする
-    local stickName = nil
-    local colliderName = nil
-    if STICK_SETTINGS[item] ~= nil then
-        stickName = item
-        colliderName = hit
-    elseif STICK_SETTINGS[hit] ~= nil then
-        stickName = hit
-        colliderName = item
-    else
-        return
-    end
-
-    if not IsMyStick(stickName) then
+    local stickName, colliderName = ResolveStickAndCollider(item, hit)
+    if stickName == nil or not IsMyStick(stickName) then
         return
     end
 
@@ -179,4 +211,17 @@ function onTriggerEnter(item, hit)
     end
 
     SendHit(stickName, hitType)
+end
+
+-- 押しっぱなしボタンからバチが離れたらキーを離す
+function onTriggerExit(item, hit)
+    local stickName, colliderName = ResolveStickAndCollider(item, hit)
+    if stickName == nil or not IsMyStick(stickName) then
+        return
+    end
+
+    local buttonSetting = GetButtonSetting(colliderName)
+    if buttonSetting ~= nil then
+        ReleaseButton(buttonSetting)
+    end
 end

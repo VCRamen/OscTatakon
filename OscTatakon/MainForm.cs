@@ -139,7 +139,7 @@ public sealed class MainForm : Form
         mapGroup.Dock = DockStyle.Fill;
         mapGroup.AutoSize = false;
         mappingGrid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Name", HeaderText = "名前", FillWeight = 22 });
-        mappingGrid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Address", HeaderText = "OSC アドレス", FillWeight = 38 });
+        mappingGrid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Address", HeaderText = "OSC アドレス", FillWeight = 32 });
         var keyColumn = new DataGridViewComboBoxColumn
         {
             Name = "Key",
@@ -156,6 +156,13 @@ public sealed class MainForm : Form
             HeaderText = "+Space",
             ToolTipText = "オンにすると、このキーと同時に Space キーも押します",
             FillWeight = 12,
+        });
+        mappingGrid.Columns.Add(new DataGridViewCheckBoxColumn
+        {
+            Name = "IsHold",
+            HeaderText = "押しっぱなし",
+            ToolTipText = "オンにすると、引数 1 で押して 0 で離すまで押しっぱなしにします",
+            FillWeight = 16,
         });
         mappingGrid.Columns.Add(new DataGridViewButtonColumn
         {
@@ -254,7 +261,7 @@ public sealed class MainForm : Form
         foreach (var mapping in mappings)
         {
             var key = SELECTABLE_KEYS.Contains(mapping.Key) ? mapping.Key : Keys.None;
-            mappingGrid.Rows.Add(mapping.Name, mapping.Address, key, mapping.WithSpace);
+            mappingGrid.Rows.Add(mapping.Name, mapping.Address, key, mapping.WithSpace, mapping.IsHold);
         }
         RebuildAddressMap();
     }
@@ -295,6 +302,7 @@ public sealed class MainForm : Form
                 Address = address,
                 Key = row.Cells["Key"].Value is Keys key ? key : Keys.None,
                 WithSpace = row.Cells["WithSpace"].Value is true,
+                IsHold = row.Cells["IsHold"].Value is true,
             });
         }
         return mappings;
@@ -410,17 +418,40 @@ public sealed class MainForm : Form
         var map = addressMap;
         var isMapped = map.TryGetValue(message.Address, out var mapping);
         var isTrigger = isMapped && IsTriggerValue(message.Args);
+        string result;
 
-        if (isTrigger)
+        if (!isMapped)
         {
-            HitMapping(mapping!);
+            result = "未割り当て";
+        }
+        else if (mapping!.IsHold)
+        {
+            if (isTrigger)
+            {
+                PressMapping(mapping);
+                Interlocked.Increment(ref hitCount);
+                result = $"→ {DescribeKeys(mapping)} 押す";
+            }
+            else
+            {
+                ReleaseMapping(mapping);
+                result = $"→ {DescribeKeys(mapping)} 離す";
+            }
+        }
+        else if (isTrigger)
+        {
+            HitMapping(mapping);
             Interlocked.Increment(ref hitCount);
+            result = $"→ {DescribeKeys(mapping)}";
+        }
+        else
+        {
+            result = "無視(0/false)";
         }
 
         if (isReceiveLogEnabled)
         {
             var args = string.Join(", ", message.Args.Select(a => a?.ToString() ?? "nil"));
-            var result = !isMapped ? "未割り当て" : isTrigger ? $"→ {DescribeKeys(mapping!)}" : "無視(0/false)";
             logQueue.Enqueue($"{message.Address} [{args}] {result}");
         }
     }
@@ -430,6 +461,20 @@ public sealed class MainForm : Form
     {
         injector.Hit(mapping.Key);
         if (mapping.WithSpace && mapping.Key != Keys.Space) injector.Hit(Keys.Space);
+    }
+
+    /// <summary>押しっぱなしモードの押下 (+Space がオンなら Space も)。</summary>
+    private void PressMapping(KeyMapping mapping)
+    {
+        injector.Press(mapping.Key);
+        if (mapping.WithSpace && mapping.Key != Keys.Space) injector.Press(Keys.Space);
+    }
+
+    /// <summary>押しっぱなしモードの解放。</summary>
+    private void ReleaseMapping(KeyMapping mapping)
+    {
+        injector.Release(mapping.Key);
+        if (mapping.WithSpace && mapping.Key != Keys.Space) injector.Release(Keys.Space);
     }
 
     private static string DescribeKeys(KeyMapping mapping) =>

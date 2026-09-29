@@ -27,11 +27,17 @@ public sealed class KeyInjector : IDisposable
     /// <summary>これ以上遅れる入力は捨てる (連打が溜まり続けるのを防ぐ)。</summary>
     private const double MAX_QUEUE_DELAY_MS = 250.0;
 
-    private sealed record ScheduledAction(double TimeMs, Keys Key, bool IsDown, long Sequence);
+    /// <summary>押しっぱなしの解放が届かなかった時に自動で離すまでの時間。</summary>
+    private const double MAX_PRESS_MS = 10000.0;
+
+    private sealed record ScheduledAction(double TimeMs, Keys Key, bool IsDown, long Sequence, bool IsSafetyRelease = false);
+
+    private sealed record HeldKey(double DownTimeMs, long SafetySequence);
 
     private readonly object lockObject = new();
     private readonly List<ScheduledAction> actions = new();
     private readonly Dictionary<Keys, double> keyFreeTimeMs = new();
+    private readonly Dictionary<Keys, HeldKey> heldKeys = new();
     private readonly AutoResetEvent wakeEvent = new(false);
     private readonly Stopwatch clock = Stopwatch.StartNew();
     private readonly Thread worker;
@@ -83,6 +89,42 @@ public sealed class KeyInjector : IDisposable
         wakeEvent.Set();
     }
 
+    /// <summary>キーを押しっぱなしにする (Release を呼ぶまで離さない)。</summary>
+    public void Press(Keys key)
+    {
+        lock (lockObject)
+        {
+            if (heldKeys.ContainsKey(key)) return;
+            var now = clock.Elapsed.TotalMilliseconds;
+            var downTime = now;
+            if (keyFreeTimeMs.TryGetValue(key, out var freeTime) && freeTime + GapMs > now)
+            {
+                downTime = freeTime + GapMs;
+            }
+            var safetySequence = sequence + 1;
+            actions.Add(new ScheduledAction(downTime, key, true, sequence++));
+            actions.Add(new ScheduledAction(downTime + MAX_PRESS_MS, key, false, sequence++, true));
+            heldKeys[key] = new HeldKey(downTime, safetySequence);
+            // 押している間は Hit の入力を受け付けない
+            keyFreeTimeMs[key] = double.MaxValue / 2;
+        }
+        wakeEvent.Set();
+    }
+
+    /// <summary>Press で押しっぱなしにしたキーを離す (最低でも HoldMs は押した状態を保つ)。</summary>
+    public void Release(Keys key)
+    {
+        lock (lockObject)
+        {
+            if (!heldKeys.Remove(key, out var held)) return;
+            actions.RemoveAll(a => a.Sequence == held.SafetySequence);
+            var upTime = Math.Max(clock.Elapsed.TotalMilliseconds, held.DownTimeMs + Math.Max(1, HoldMs));
+            actions.Add(new ScheduledAction(upTime, key, false, sequence++));
+            keyFreeTimeMs[key] = upTime;
+        }
+        wakeEvent.Set();
+    }
+
     private void WorkerLoop()
     {
         while (isRunning)
@@ -98,6 +140,11 @@ public sealed class KeyInjector : IDisposable
                     if (remain <= 0.5)
                     {
                         actions.Remove(next);
+                        if (next.IsSafetyRelease && heldKeys.Remove(next.Key))
+                        {
+                            keyFreeTimeMs[next.Key] = next.TimeMs;
+                            Log?.Invoke($"{next.Key} の解放が届かないため自動で離しました");
+                        }
                     }
                     else
                     {
@@ -212,9 +259,10 @@ public sealed class KeyInjector : IDisposable
         List<Keys> keys;
         lock (lockObject)
         {
-            keys = actions.Where(a => !a.IsDown).Select(a => a.Key).Distinct().ToList();
+            keys = actions.Where(a => !a.IsDown).Select(a => a.Key).Concat(heldKeys.Keys).Distinct().ToList();
             actions.Clear();
             keyFreeTimeMs.Clear();
+            heldKeys.Clear();
         }
         foreach (var key in keys)
         {
