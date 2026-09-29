@@ -31,7 +31,7 @@ public sealed class AppSettings
     /// 既定の割り当ての版数。既定の割り当てを変えたら上げる。
     /// 保存済みの版数がこれより古い場合、割り当ては新しい既定値に置き換える。
     /// </summary>
-    public const int CURRENT_MAPPINGS_VERSION = 2;
+    public const int CURRENT_MAPPINGS_VERSION = 3;
 
     private const string FILE_NAME = "settings.json";
 
@@ -77,6 +77,8 @@ public sealed class AppSettings
         new KeyMapping { Name = "曲選択 ←", Address = "/taiko/menu/left", Key = Keys.A, IsHold = true },
         new KeyMapping { Name = "戻る/オプション", Address = "/taiko/menu/back", Key = Keys.Back },
         new KeyMapping { Name = "一時停止", Address = "/taiko/menu/pause", Key = Keys.Tab },
+        new KeyMapping { Name = "ライブラリ選択 Q", Address = "/taiko/menu/library/q", Key = Keys.Q },
+        new KeyMapping { Name = "ライブラリ選択 E", Address = "/taiko/menu/library/e", Key = Keys.E },
     };
 
     private static string FilePath => Path.Combine(AppContext.BaseDirectory, FILE_NAME);

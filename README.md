@@ -49,6 +49,8 @@ Visual Studio 2022 で `OscTatakon/OscTatakon.csproj` を開いてもビルド�
 | 曲選択 ← | `/taiko/menu/left` | A | | ON |
 | 戻る/オプション | `/taiko/menu/back` | BackSpace | | |
 | 一時停止 | `/taiko/menu/pause` | Tab | | |
+| ライブラリ選択 Q | `/taiko/menu/library/q` | Q | | |
+| ライブラリ選択 E | `/taiko/menu/library/e` | E | | |
 
 - 表で自由に追加・変更できます (設定は exe と同じフォルダの `settings.json` に変更のたびに保存)。
 - アプリ更新で既定の割り当てが変わった場合、保存済みの割り当ては自動で新しい初期値に置き換わります (ログに表示)。

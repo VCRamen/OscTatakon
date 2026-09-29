@@ -7,6 +7,7 @@
 --   曲選択ボタン (どちらのバチでも):
 --     KaUp → W, KaDown → S, KaRight → D, KaLeft → A, BSOptionButton → BackSpace
 --     TabOptionButton → Tab (一時停止)
+--     QOptionButton → Q, EOptionButton → E (ライブラリ選択)
 --     上下左右はバチが触れている間 (onTriggerEnter 〜 onTriggerExit) 押しっぱなし
 --     (触れた時に 1、離れた時に 0 を送る)
 --   (キーの割り当ては OscTatakon 側の設定)
@@ -38,6 +39,8 @@ local BUTTON_SETTINGS = {
     { colliderName = "KaLeft", address = "/taiko/menu/left", isHold = true },      -- A (←)
     { colliderName = "BSOptionButton", address = "/taiko/menu/back", isHold = false }, -- BackSpace
     { colliderName = "TabOptionButton", address = "/taiko/menu/pause", isHold = false }, -- Tab (一時停止)
+    { colliderName = "QOptionButton", address = "/taiko/menu/library/q", isHold = false }, -- Q (ライブラリ選択)
+    { colliderName = "EOptionButton", address = "/taiko/menu/library/e", isHold = false }, -- E (ライブラリ選択)
 }
 
 -- 同じバチの多重ヒット (複数の KaCollider を跨いだ時など) を抑制する時間 (秒)
