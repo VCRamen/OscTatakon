@@ -2,8 +2,11 @@
 -- バチ (StickRoot1 / StickRoot2) が太鼓の判定コライダーに入ったら、
 -- OSC でローカルの OscTatakon に通知してキー入力させる。
 --
---   StickRoot1: ドン → J (/taiko/don/right), カッ → K (/taiko/ka/right)
---   StickRoot2: ドン → F (/taiko/don/left),  カッ → D (/taiko/ka/left)
+--   StickRoot1: ドン → J (/taiko/don/right), カッ → U (/taiko/ka/right)
+--   StickRoot2: ドン → F (/taiko/don/left),  カッ → R (/taiko/ka/left)
+--   曲選択ボタン (どちらのバチでも):
+--     KaUp → ↑, KaDown → ↓, KaRight → →, KaLeft → ←, BSOptionButton → BackSpace
+--   (キーの割り当ては OscTatakon 側の設定)
 --
 -- OSC はローカル (127.0.0.1) にのみ送信され、送信先ポートは
 -- バーチャルキャストのタイトル画面 > 詳細設定 > VCI の「OSC 送信ポート」(既定 18100)。
@@ -13,21 +16,42 @@ local KA_COLLIDER_NAME = "KaCollider"
 
 -- バチの SubItem 名 → 判定種別ごとの OSC アドレス
 local STICK_SETTINGS = {
-    StickRoot1 = {
+    StickTip1 = {
         don = "/taiko/don/right", -- J
-        ka = "/taiko/ka/right",   -- K
+        ka = "/taiko/ka/right",   -- U
     },
-    StickRoot2 = {
+    StickTip2 = {
         don = "/taiko/don/left",  -- F
-        ka = "/taiko/ka/left",    -- D
+        ka = "/taiko/ka/left",    -- R
     },
+}
+
+-- 曲選択ボタンのコライダー名 → OSC アドレス
+local BUTTON_SETTINGS = {
+    { colliderName = "KaUp", address = "/taiko/menu/up" },          -- ↑
+    { colliderName = "KaDown", address = "/taiko/menu/down" },      -- ↓
+    { colliderName = "KaRight", address = "/taiko/menu/right" },    -- →
+    { colliderName = "KaLeft", address = "/taiko/menu/left" },      -- ←
+    { colliderName = "BSOptionButton", address = "/taiko/menu/back" }, -- BackSpace
 }
 
 -- 同じバチの多重ヒット (複数の KaCollider を跨いだ時など) を抑制する時間 (秒)
 local HIT_COOLDOWN_SEC = 0.06
 
+-- 同じボタンの多重ヒットを抑制する時間 (秒)。短いとカーソルが 2 つ進むことがある
+local BUTTON_COOLDOWN_SEC = 0.3
+
 local stickTransforms = {}
 local lastHitTimes = {}
+local lastButtonTimes = {}
+
+local kaSnapObj = vci.assets.GetTransform("SuapKa")
+local taikoObj = vci.assets.GetTransform("TataconRoot")
+
+local snaps = {
+    {vci.assets.GetTransform("StickTip1"), vci.assets.GetTransform("StickRoot1") },
+    {vci.assets.GetTransform("StickTip2"), vci.assets.GetTransform("StickRoot2") }
+}
 
 for stickName, _ in pairs(STICK_SETTINGS) do
     stickTransforms[stickName] = vci.assets.GetTransform(stickName)
@@ -43,6 +67,19 @@ local function GetHitType(colliderName)
     end
     if string.find(colliderName, KA_COLLIDER_NAME, 1, true) ~= nil then
         return "ka"
+    end
+    return nil
+end
+
+-- コライダー名から曲選択ボタンの設定を返す。該当しなければ nil
+local function GetButtonSetting(colliderName)
+    if colliderName == nil then
+        return nil
+    end
+    for _, buttonSetting in ipairs(BUTTON_SETTINGS) do
+        if string.find(colliderName, buttonSetting.colliderName, 1, true) ~= nil then
+            return buttonSetting
+        end
     end
     return nil
 end
@@ -73,6 +110,44 @@ local function SendHit(stickName, hitType)
     vci.osc.SendInt32(address, 1)
 end
 
+local function SendButton(buttonSetting)
+    local now = GetNowSec()
+    local lastTime = lastButtonTimes[buttonSetting.colliderName]
+    if lastTime ~= nil and now - lastTime < BUTTON_COOLDOWN_SEC then
+        return
+    end
+    lastButtonTimes[buttonSetting.colliderName] = now
+
+    vci.osc.SendInt32(buttonSetting.address, 1)
+end
+
+function updateAll()
+    kaSnapObj.SetPosition(taikoObj.GetPosition())
+    kaSnapObj.SetRotation(taikoObj.GetRotation())
+    kaSnapObj.SetLocalScale(taikoObj.GetLocalScale())
+
+    for snapID, snap in ipairs(snaps) do
+        snap[1].SetPosition(snap[2].GetPosition())
+        snap[1].SetRotation(snap[2].GetRotation())
+    end
+end
+
+function onUse(use)
+    if use == "StickRoot1" then
+        vci.assets.GetTransform("StickRoot1Collider").SetActive(false)
+        print("コライダー消し１")
+    end
+    if use == "StickRoot2" then
+        vci.assets.GetTransform("StickRoot2Collider").SetActive(false)
+        print("コライダー消し２")
+    end
+
+    if use == "TataconRoot" then
+        --vci.assets.GetTransform("StickRoot1Collider").SetActive(true)
+        --vci.assets.GetTransform("StickRoot2Collider").SetActive(true)
+    end
+end
+
 -- item: トリガー判定が発生した SubItem 名, hit: 当たった相手のコライダー名
 function onTriggerEnter(item, hit)
     -- バチ側が item でも hit でも拾えるように両方向チェックする
@@ -89,6 +164,12 @@ function onTriggerEnter(item, hit)
     end
 
     if not IsMyStick(stickName) then
+        return
+    end
+
+    local buttonSetting = GetButtonSetting(colliderName)
+    if buttonSetting ~= nil then
+        SendButton(buttonSetting)
         return
     end
 

@@ -33,16 +33,24 @@ Visual Studio 2022 で `OscTatakon/OscTatakon.csproj` を開いてもビルド�
 2. 太鼓の達人を起動し、演奏画面のウィンドウをクリックして **前面 (アクティブ)** にしておく。
 3. VCI から OSC が届くと、割り当てたキーが押されます。
 
-### 既定の割り当て (太鼓の達人 Steam 版の初期キー配置)
+### 既定の割り当て
 
-| 名前 | OSC アドレス | キー |
-|---|---|---|
-| カッ(左) | `/taiko/ka/left` | D |
-| ドン(左) | `/taiko/don/left` | F |
-| ドン(右) | `/taiko/don/right` | J |
-| カッ(右) | `/taiko/ka/right` | K |
+ゲーム既定の D/F/J/K は WASD 操作と被るため、**ゲーム側のキー設定でカッを R / U に変更してください**。
+
+| 名前 | OSC アドレス | キー | +Space |
+|---|---|---|---|
+| ドン(右) | `/taiko/don/right` | J | ON |
+| ドン(左) | `/taiko/don/left` | F | ON |
+| カッ(右) | `/taiko/ka/right` | U | |
+| カッ(左) | `/taiko/ka/left` | R | |
+| 曲選択 ↑ | `/taiko/menu/up` | ↑ | |
+| 曲選択 ↓ | `/taiko/menu/down` | ↓ | |
+| 曲選択 → | `/taiko/menu/right` | → | |
+| 曲選択 ← | `/taiko/menu/left` | ← | |
+| 戻る/オプション | `/taiko/menu/back` | BackSpace | |
 
 - 表で自由に追加・変更できます (設定は exe と同じフォルダの `settings.json` に保存)。
+- 「割り当てを初期値に戻す」で上の表の状態に戻せます。
 - 「+Space」にチェックを入れた行は、そのキーと同時に Space キーも押します (ドンの行に付けると、ドン入力で Space も押されます)。
 - 引数なし、または先頭引数が 0 / false 以外のメッセージを「1 回叩いた」とみなします。
 - 未割り当てのアドレスもログに出るので、VCI 側のアドレス確認に使えます。

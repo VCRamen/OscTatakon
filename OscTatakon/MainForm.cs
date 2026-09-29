@@ -48,6 +48,7 @@ public sealed class MainForm : Form
     private readonly Button refreshButton = new() { Text = "更新", AutoSize = true };
 
     private readonly Button testAllButton = new() { Text = "3秒後に全キーをテスト", AutoSize = true };
+    private readonly Button resetMappingButton = new() { Text = "割り当てを初期値に戻す", AutoSize = true };
     private readonly CheckBox logReceiveCheck = new() { Text = "受信内容をログに出す", AutoSize = true, Checked = true };
     private readonly Label counterLabel = new() { AutoSize = true };
     private readonly ListBox logList = new()
@@ -63,7 +64,7 @@ public sealed class MainForm : Form
         settings = AppSettings.Load();
 
         Text = "OscTatakon - OSC → キー入力" + (IsAdministrator() ? " [管理者]" : "");
-        ClientSize = new Size(640, 720);
+        ClientSize = new Size(640, 820);
         MinimumSize = new Size(560, 600);
         Font = new Font("Yu Gothic UI", 9f);
 
@@ -77,6 +78,7 @@ public sealed class MainForm : Form
         startButton.Click += (_, _) => ToggleReceiver();
         refreshButton.Click += (_, _) => RefreshProcessList();
         testAllButton.Click += async (_, _) => await TestAllKeysAsync();
+        resetMappingButton.Click += (_, _) => ResetMappings();
         methodCombo.SelectedIndexChanged += (_, _) => ApplyInputSettings();
         holdInput.ValueChanged += (_, _) => ApplyInputSettings();
         gapInput.ValueChanged += (_, _) => ApplyInputSettings();
@@ -116,10 +118,10 @@ public sealed class MainForm : Form
             Padding = new Padding(8),
         };
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        root.RowStyles.Add(new RowStyle(SizeType.Percent, 40));
+        root.RowStyles.Add(new RowStyle(SizeType.Percent, 55));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        root.RowStyles.Add(new RowStyle(SizeType.Percent, 60));
+        root.RowStyles.Add(new RowStyle(SizeType.Percent, 45));
         Controls.Add(root);
 
         // OSC 受信
@@ -192,7 +194,7 @@ public sealed class MainForm : Form
 
         // テスト
         var testFlow = CreateFlow();
-        testFlow.Controls.AddRange(new Control[] { testAllButton, logReceiveCheck, counterLabel });
+        testFlow.Controls.AddRange(new Control[] { testAllButton, resetMappingButton, logReceiveCheck, counterLabel });
         root.Controls.Add(testFlow);
 
         // ログ
@@ -242,14 +244,28 @@ public sealed class MainForm : Form
         RefreshProcessList();
         processCombo.Text = settings.TargetProcessName;
 
+        SetMappingsToGrid(settings.Mappings);
+        ApplyInputSettings();
+    }
+
+    private void SetMappingsToGrid(IEnumerable<KeyMapping> mappings)
+    {
         mappingGrid.Rows.Clear();
-        foreach (var mapping in settings.Mappings)
+        foreach (var mapping in mappings)
         {
             var key = SELECTABLE_KEYS.Contains(mapping.Key) ? mapping.Key : Keys.None;
             mappingGrid.Rows.Add(mapping.Name, mapping.Address, key, mapping.WithSpace);
         }
         RebuildAddressMap();
-        ApplyInputSettings();
+    }
+
+    private void ResetMappings()
+    {
+        var answer = MessageBox.Show(
+            this, "キー割り当てを初期値に戻しますか？", Text, MessageBoxButtons.OKCancel, MessageBoxIcon.Question);
+        if (answer != DialogResult.OK) return;
+        SetMappingsToGrid(AppSettings.CreateDefaultMappings());
+        AddLog("キー割り当てを初期値に戻しました");
     }
 
     private void SaveUiToSettings()

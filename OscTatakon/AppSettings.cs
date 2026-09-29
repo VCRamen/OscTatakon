@@ -38,13 +38,22 @@ public sealed class AppSettings
 
     public List<KeyMapping> Mappings { get; set; } = CreateDefaultMappings();
 
-    /// <summary>太鼓の達人 (Steam 版) の初期キー配置 D/F/J/K。</summary>
+    /// <summary>
+    /// 初期の割り当て。
+    /// ゲーム既定の D/F/J/K は WASD 操作と被るため、ゲーム側のキー設定で
+    /// カッを R/U に変更してもらう前提で R/F/J/U にしている。
+    /// </summary>
     public static List<KeyMapping> CreateDefaultMappings() => new()
     {
-        new KeyMapping { Name = "カッ(左)", Address = "/taiko/ka/left", Key = Keys.D },
-        new KeyMapping { Name = "ドン(左)", Address = "/taiko/don/left", Key = Keys.F },
-        new KeyMapping { Name = "ドン(右)", Address = "/taiko/don/right", Key = Keys.J },
-        new KeyMapping { Name = "カッ(右)", Address = "/taiko/ka/right", Key = Keys.K },
+        new KeyMapping { Name = "ドン(右)", Address = "/taiko/don/right", Key = Keys.J, WithSpace = true },
+        new KeyMapping { Name = "ドン(左)", Address = "/taiko/don/left", Key = Keys.F, WithSpace = true },
+        new KeyMapping { Name = "カッ(右)", Address = "/taiko/ka/right", Key = Keys.U },
+        new KeyMapping { Name = "カッ(左)", Address = "/taiko/ka/left", Key = Keys.R },
+        new KeyMapping { Name = "曲選択 ↑", Address = "/taiko/menu/up", Key = Keys.Up },
+        new KeyMapping { Name = "曲選択 ↓", Address = "/taiko/menu/down", Key = Keys.Down },
+        new KeyMapping { Name = "曲選択 →", Address = "/taiko/menu/right", Key = Keys.Right },
+        new KeyMapping { Name = "曲選択 ←", Address = "/taiko/menu/left", Key = Keys.Left },
+        new KeyMapping { Name = "戻る/オプション", Address = "/taiko/menu/back", Key = Keys.Back },
     };
 
     private static string FilePath => Path.Combine(AppContext.BaseDirectory, FILE_NAME);
