@@ -23,6 +23,8 @@ public sealed class MainForm : Form
     private long hitCount;
     private volatile bool isReceiveLogEnabled = true;
     private int targetRefreshTick;
+    private bool isLoadingSettings;
+    private bool isSettingsDirty;
 
     private readonly NumericUpDown portInput = new() { Minimum = 1, Maximum = 65535, Width = 80 };
     private readonly Button startButton = new() { Text = "受信開始", AutoSize = true };
@@ -85,8 +87,10 @@ public sealed class MainForm : Form
         activateCheck.CheckedChanged += (_, _) => ApplyInputSettings();
         processCombo.TextChanged += (_, _) => ApplyInputSettings();
         logReceiveCheck.CheckedChanged += (_, _) => isReceiveLogEnabled = logReceiveCheck.Checked;
-        mappingGrid.CellValueChanged += (_, _) => RebuildAddressMap();
-        mappingGrid.RowsRemoved += (_, _) => RebuildAddressMap();
+        mappingGrid.CellValueChanged += (_, _) => OnMappingsChanged();
+        mappingGrid.RowsRemoved += (_, _) => OnMappingsChanged();
+        portInput.ValueChanged += (_, _) => MarkSettingsDirty();
+        autoStartCheck.CheckedChanged += (_, _) => MarkSettingsDirty();
         mappingGrid.CellContentClick += OnGridCellContentClick;
         mappingGrid.DataError += (_, e) => e.ThrowException = false;
         mappingGrid.CurrentCellDirtyStateChanged += (_, _) =>
@@ -101,6 +105,11 @@ public sealed class MainForm : Form
         uiTimer.Start();
 
         AddLog($"設定ファイル: {Path.Combine(AppContext.BaseDirectory, "settings.json")}");
+        if (settings.WasMappingsUpgraded)
+        {
+            AddLog("既定のキー割り当てが更新されたため、割り当てを新しい初期値に置き換えました");
+            SaveUiToSettings();
+        }
         if (settings.AutoStart) ToggleReceiver();
     }
 
@@ -242,17 +251,25 @@ public sealed class MainForm : Form
 
     private void LoadSettingsToUi()
     {
-        portInput.Value = Math.Clamp(settings.Port, 1, 65535);
-        autoStartCheck.Checked = settings.AutoStart;
-        methodCombo.SelectedIndex = (int)settings.Method;
-        holdInput.Value = Math.Clamp(settings.HoldMs, 1, 500);
-        gapInput.Value = Math.Clamp(settings.GapMs, 0, 500);
-        activateCheck.Checked = settings.ActivateTarget;
-        RefreshProcessList();
-        processCombo.Text = settings.TargetProcessName;
+        isLoadingSettings = true;
+        try
+        {
+            portInput.Value = Math.Clamp(settings.Port, 1, 65535);
+            autoStartCheck.Checked = settings.AutoStart;
+            methodCombo.SelectedIndex = (int)settings.Method;
+            holdInput.Value = Math.Clamp(settings.HoldMs, 1, 500);
+            gapInput.Value = Math.Clamp(settings.GapMs, 0, 500);
+            activateCheck.Checked = settings.ActivateTarget;
+            RefreshProcessList();
+            processCombo.Text = settings.TargetProcessName;
 
-        SetMappingsToGrid(settings.Mappings);
-        ApplyInputSettings();
+            SetMappingsToGrid(settings.Mappings);
+            ApplyInputSettings();
+        }
+        finally
+        {
+            isLoadingSettings = false;
+        }
     }
 
     private void SetMappingsToGrid(IEnumerable<KeyMapping> mappings)
@@ -272,11 +289,25 @@ public sealed class MainForm : Form
             this, "キー割り当てを初期値に戻しますか？", Text, MessageBoxButtons.OKCancel, MessageBoxIcon.Question);
         if (answer != DialogResult.OK) return;
         SetMappingsToGrid(AppSettings.CreateDefaultMappings());
+        SaveUiToSettings();
         AddLog("キー割り当てを初期値に戻しました");
+    }
+
+    /// <summary>設定が変わったことを記録する (UI タイマーでまとめて保存)。</summary>
+    private void MarkSettingsDirty()
+    {
+        if (!isLoadingSettings) isSettingsDirty = true;
+    }
+
+    private void OnMappingsChanged()
+    {
+        RebuildAddressMap();
+        MarkSettingsDirty();
     }
 
     private void SaveUiToSettings()
     {
+        isSettingsDirty = false;
         settings.Port = (int)portInput.Value;
         settings.AutoStart = autoStartCheck.Checked;
         settings.Method = (InputMethod)Math.Max(0, methodCombo.SelectedIndex);
@@ -285,7 +316,9 @@ public sealed class MainForm : Form
         settings.ActivateTarget = activateCheck.Checked;
         settings.TargetProcessName = processCombo.Text.Trim();
         settings.Mappings = ReadMappingsFromGrid();
-        settings.Save();
+        settings.MappingsVersion = AppSettings.CURRENT_MAPPINGS_VERSION;
+        var error = settings.Save();
+        if (error != null) AddLog($"設定の保存に失敗しました: {error}");
     }
 
     private List<KeyMapping> ReadMappingsFromGrid()
@@ -320,6 +353,7 @@ public sealed class MainForm : Form
 
     private void ApplyInputSettings()
     {
+        MarkSettingsDirty();
         injector.Method = (InputMethod)Math.Max(0, methodCombo.SelectedIndex);
         injector.HoldMs = (int)holdInput.Value;
         injector.GapMs = (int)gapInput.Value;
@@ -536,6 +570,9 @@ public sealed class MainForm : Form
 
     private void FlushUi()
     {
+        // 変更はすぐ保存する (ウィンドウを閉じずに終了した場合でも設定が残るように)
+        if (isSettingsDirty) SaveUiToSettings();
+
         if (!logQueue.IsEmpty)
         {
             logList.BeginUpdate();

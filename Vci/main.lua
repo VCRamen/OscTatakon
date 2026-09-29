@@ -5,7 +5,7 @@
 --   StickRoot1: ドン → J (/taiko/don/right), カッ → U (/taiko/ka/right)
 --   StickRoot2: ドン → F (/taiko/don/left),  カッ → R (/taiko/ka/left)
 --   曲選択ボタン (どちらのバチでも):
---     KaUp → ↑, KaDown → ↓, KaRight → →, KaLeft → ←, BSOptionButton → BackSpace
+--     KaUp → W, KaDown → S, KaRight → D, KaLeft → A, BSOptionButton → BackSpace
 --     TabOptionButton → Tab (一時停止)
 --     上下左右はバチが触れている間 (onTriggerEnter 〜 onTriggerExit) 押しっぱなし
 --     (触れた時に 1、離れた時に 0 を送る)
@@ -32,10 +32,10 @@ local STICK_SETTINGS = {
 -- 曲選択ボタンのコライダー名 → OSC アドレス
 -- isHold = true のボタンは、触れている間押しっぱなしにする
 local BUTTON_SETTINGS = {
-    { colliderName = "KaUp", address = "/taiko/menu/up", isHold = true },          -- ↑
-    { colliderName = "KaDown", address = "/taiko/menu/down", isHold = true },      -- ↓
-    { colliderName = "KaRight", address = "/taiko/menu/right", isHold = true },    -- →
-    { colliderName = "KaLeft", address = "/taiko/menu/left", isHold = true },      -- ←
+    { colliderName = "KaUp", address = "/taiko/menu/up", isHold = true },          -- W (↑)
+    { colliderName = "KaDown", address = "/taiko/menu/down", isHold = true },      -- S (↓)
+    { colliderName = "KaRight", address = "/taiko/menu/right", isHold = true },    -- D (→)
+    { colliderName = "KaLeft", address = "/taiko/menu/left", isHold = true },      -- A (←)
     { colliderName = "BSOptionButton", address = "/taiko/menu/back", isHold = false }, -- BackSpace
     { colliderName = "TabOptionButton", address = "/taiko/menu/pause", isHold = false }, -- Tab (一時停止)
 }

@@ -43,14 +43,15 @@ Visual Studio 2022 で `OscTatakon/OscTatakon.csproj` を開いてもビルド�
 | ドン(左) | `/taiko/don/left` | F | ON | |
 | カッ(右) | `/taiko/ka/right` | U | | |
 | カッ(左) | `/taiko/ka/left` | R | | |
-| 曲選択 ↑ | `/taiko/menu/up` | ↑ | | ON |
-| 曲選択 ↓ | `/taiko/menu/down` | ↓ | | ON |
-| 曲選択 → | `/taiko/menu/right` | → | | ON |
-| 曲選択 ← | `/taiko/menu/left` | ← | | ON |
+| 曲選択 ↑ | `/taiko/menu/up` | W | | ON |
+| 曲選択 ↓ | `/taiko/menu/down` | S | | ON |
+| 曲選択 → | `/taiko/menu/right` | D | | ON |
+| 曲選択 ← | `/taiko/menu/left` | A | | ON |
 | 戻る/オプション | `/taiko/menu/back` | BackSpace | | |
 | 一時停止 | `/taiko/menu/pause` | Tab | | |
 
-- 表で自由に追加・変更できます (設定は exe と同じフォルダの `settings.json` に保存)。
+- 表で自由に追加・変更できます (設定は exe と同じフォルダの `settings.json` に変更のたびに保存)。
+- アプリ更新で既定の割り当てが変わった場合、保存済みの割り当ては自動で新しい初期値に置き換わります (ログに表示)。
 - 「押しっぱなし」にチェックを入れた行は、引数 1 (true) で押して 0 (false) で離すまでキーを押し続けます。解放が 10 秒届かない場合は自動で離します。
 - 「割り当てを初期値に戻す」で上の表の状態に戻せます。
 - 「+Space」にチェックを入れた行は、そのキーと同時に Space キーも押します (ドンの行に付けると、ドン入力で Space も押されます)。
