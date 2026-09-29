@@ -6,6 +6,7 @@
 --   StickRoot2: ドン → F (/taiko/don/left),  カッ → R (/taiko/ka/left)
 --   曲選択ボタン (どちらのバチでも):
 --     KaUp → ↑, KaDown → ↓, KaRight → →, KaLeft → ←, BSOptionButton → BackSpace
+--     TabOptionButton → Tab (一時停止)
 --     上下左右はバチが触れている間 (onTriggerEnter 〜 onTriggerExit) 押しっぱなし
 --     (触れた時に 1、離れた時に 0 を送る)
 --   (キーの割り当ては OscTatakon 側の設定)
@@ -36,6 +37,7 @@ local BUTTON_SETTINGS = {
     { colliderName = "KaRight", address = "/taiko/menu/right", isHold = true },    -- →
     { colliderName = "KaLeft", address = "/taiko/menu/left", isHold = true },      -- ←
     { colliderName = "BSOptionButton", address = "/taiko/menu/back", isHold = false }, -- BackSpace
+    { colliderName = "TabOptionButton", address = "/taiko/menu/pause", isHold = false }, -- Tab (一時停止)
 }
 
 -- 同じバチの多重ヒット (複数の KaCollider を跨いだ時など) を抑制する時間 (秒)

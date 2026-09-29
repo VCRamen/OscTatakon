@@ -48,6 +48,7 @@ Visual Studio 2022 で `OscTatakon/OscTatakon.csproj` を開いてもビルド�
 | 曲選択 → | `/taiko/menu/right` | → | | ON |
 | 曲選択 ← | `/taiko/menu/left` | ← | | ON |
 | 戻る/オプション | `/taiko/menu/back` | BackSpace | | |
+| 一時停止 | `/taiko/menu/pause` | Tab | | |
 
 - 表で自由に追加・変更できます (設定は exe と同じフォルダの `settings.json` に保存)。
 - 「押しっぱなし」にチェックを入れた行は、引数 1 (true) で押して 0 (false) で離すまでキーを押し続けます。解放が 10 秒届かない場合は自動で離します。

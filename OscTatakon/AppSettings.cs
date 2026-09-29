@@ -60,6 +60,7 @@ public sealed class AppSettings
         new KeyMapping { Name = "曲選択 →", Address = "/taiko/menu/right", Key = Keys.Right, IsHold = true },
         new KeyMapping { Name = "曲選択 ←", Address = "/taiko/menu/left", Key = Keys.Left, IsHold = true },
         new KeyMapping { Name = "戻る/オプション", Address = "/taiko/menu/back", Key = Keys.Back },
+        new KeyMapping { Name = "一時停止", Address = "/taiko/menu/pause", Key = Keys.Tab },
     };
 
     private static string FilePath => Path.Combine(AppContext.BaseDirectory, FILE_NAME);
